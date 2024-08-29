@@ -13,20 +13,22 @@ function App() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch("https://swapi.dev/api/films/");
+      const response = await fetch("https://movie-mania-88eaa-default-rtdb.firebaseio.com/movies.json");
       if (!response.ok) {
         throw new Error("Something went wrong!");
       }
       const data = await response.json();
-      const transformedMovies = data.results.map((movieData) => {
-        return {
-          id: movieData.episode_id,
-          title: movieData.title,
-          openingText: movieData.opening_crawl,
-          releaseDate: movieData.release_date,
-        };
-      });
-      setMovies(transformedMovies);
+      const loadedMovies = [];
+      for(const key in data) {
+        loadedMovies.push({
+          id: key,
+          title: data[key].title,
+          openingText: data[key].openingText,
+          releaseDate: data[key].releaseDate,
+        })
+      }
+      
+      setMovies(loadedMovies);
     } catch (error) {
       setError(error.message);
     }
@@ -37,19 +39,40 @@ function App() {
     fetchMoviesHandler();
   }, [fetchMoviesHandler]);
 
+  const addMovieHandler = async (movie) => {
+    const response = await fetch("https://movie-mania-88eaa-default-rtdb.firebaseio.com/movies.json", {
+      method: 'POST',
+      body: JSON.stringify(movie),
+      headers: {
+        'Content-type': 'application/json'
+      }
+    })
+    const data = await response.json();
+    console.log(data);
+    setMovies((prevMovies) => [...prevMovies, movie]);
+  }
+
+  const dltMovieHandler = async (movieId) => {
+    console.log(movieId);
+    const response = await fetch(`https://movie-mania-88eaa-default-rtdb.firebaseio.com/movies/${movieId}.json`, {
+      method: 'DELETE'
+    })
+    console.log(response);
+    const updatedMovies = movies.filter((movie) => {
+      return movie.id !== movieId;
+    })
+    setMovies(updatedMovies);
+  }
+
   let content = <p>No Movies Found</p>;
   if (movies.length > 0) {
-    content = <MoviesList movies={movies} />;
+    content = <MoviesList movies={movies} onMovieDltHandler={dltMovieHandler} />;
   }
   if (error) {
     content = <p>{error}</p>;
   }
   if (isLoading) {
     content = <p>Loading...</p>;
-  }
-
-  const addMovieHandler = (movie) => {
-    console.log(movie);
   }
 
   return (
